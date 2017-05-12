@@ -11,6 +11,7 @@ namespace Loopnet_Headless_DotNet
         public string Name { get; set; }
         public string BaseResultsURL { get; set; }
         public List<Listing> Listings = new List<Listing>();
+        public string rawJSON { get; set; }
     }
 
     class Listing

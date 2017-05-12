@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using OpenQA.Selenium.PhantomJS;
 using OpenQA.Selenium.Support;
 using OpenQA.Selenium;
+using System.IO;
 
 namespace Loopnet_Headless_DotNet
 {
@@ -15,6 +16,7 @@ namespace Loopnet_Headless_DotNet
         static TimeSpan implicitWait = new TimeSpan(0, 0, 30);
         static TimeSpan pageLoadWait = new TimeSpan(0, 0, 60);
         static TimeSpan shortWait = new TimeSpan(0, 0, 5);
+        static string jsonOutputDirectory = Path.Combine(Environment.CurrentDirectory, "JSONFiles"); 
         static string outputMessage = "";
         /// <summary>
         /// Our objective from here is to get the json data in the source and save it.  We'll pull it apart later.
@@ -33,7 +35,7 @@ namespace Loopnet_Headless_DotNet
                 driver.Manage().Timeouts().ImplicitWait = implicitWait;
                 driver.Manage().Timeouts().PageLoad = pageLoadWait;
                 //I can't really say what this might do but fuck it, why not?
-                driver.Manage().Window.Maximize();
+                driver.Manage().Window.Size = new System.Drawing.Size(1920, 1080);
                 driver.Navigate().GoToUrl("http://www.loopnet.com/xNet/MainSite/User/customlogin.aspx?LinkCode=31824");
                 //var bigAssTextBox = driver.FindElementByName("geography");
                 //Console.WriteLine("This element has this for a class value: " + bigAssTextBox.GetAttribute("class"));
@@ -79,9 +81,11 @@ namespace Loopnet_Headless_DotNet
                         });
                     }
                     //Broker info.  Deal with that later.
-                    //Click the create reports button
-                    driver.FindElement(By.ClassName(".button.primary.punchout.inverted.create-reports.advanced")).Click();
+                    //Click the create reports button                   
+                    //
+                    driver.FindElement(By.XPath("/html/body/section/main/section/div/section[1]//div[@class='toolbar-right']/div/button")).Click();
                     //Select all reports
+                    //
                     bool firstTry = true;
                     bool lastPage = false;
                     while (!lastPage)
@@ -101,12 +105,36 @@ namespace Loopnet_Headless_DotNet
                         }
                         firstTry = false;
                         //Select all the elements then circle around to the next page and repeat.
-                        driver.FindElement(By.XPath("//button[text()='Select all']")).Click();
+                        //
+                        //driver.GetScreenshot();
+                        var selectAllButton = driver.FindElement(By.XPath("//button[text()='Select all']"));
+                        ((IJavaScriptExecutor)driver).ExecuteScript("arguments[0].click();", selectAllButton);
+                        //OpenQA.Selenium.Interactions.Actions actions = new OpenQA.Selenium.Interactions.Actions(driver);
+                        //actions.MoveToElement(selectAllButton);
+                        //actions.Perform();
+                        //
+                        //selectAllButton.Click();
                     }
                     //Onward to our report. Click the big red generate reports button.
                     driver.FindElement(By.XPath("//button[text()='Generate Reports']")).Click();
                     //
-                    driver.FindElement(By.XPath(""));
+                    //Select listing summary report radio button
+                    driver.FindElement(By.Id("listingSummary")).Click();
+                    //
+                    driver.FindElement(By.Id("btnCreateReport1")).Click();
+                    //
+                    driver.SwitchTo().Frame("reportFrame");
+                    //Get that dirty JSON
+                    string source = driver.PageSource;
+                    source = source.Substring(source.IndexOf("\"Data\":{\"Report\":"));
+                    source = source.Substring(0, source.IndexOf("Config={")).Trim();
+                    //If this is indeed valid JSON, save it.
+                    currentSearch.rawJSON = source;
+                    //
+                    if (Directory.Exists(jsonOutputDirectory) == false)
+                        Directory.CreateDirectory(jsonOutputDirectory);
+                    //
+                    File.WriteAllText(jsonOutputDirectory + "//SearchData_" + searchIndex, currentSearch.rawJSON);
                 }
 
             }
